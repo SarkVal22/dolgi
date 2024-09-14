@@ -4,20 +4,23 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import os
+import json
 
 # Применение nest_asyncio для решения проблемы с циклом событий
 nest_asyncio.apply()
 
-# Вставьте ваш токен здесь
-TELEGRAM_TOKEN = '7260269582:AAG2uGIJiU7wQ8nIGcwF5qFdXVx_NfunShI'
-SPREADSHEET_ID = '1tVwumW6Yj5DoPVd5GvV2TLU0T_yuRCf523uvwUXqYcw'
+# Используйте переменные окружения для токенов и идентификаторов
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
+GOOGLE_CREDENTIALS = json.loads(os.getenv('GOOGLE_CREDENTIALS'))
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Настройка авторизации Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-credentials = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_CREDENTIALS, scope)
 client = gspread.authorize(credentials)
 sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
