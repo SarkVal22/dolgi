@@ -65,6 +65,8 @@ async def get_debts(update: Update, context: CallbackContext) -> None:
         try:
             amount = int(amount.replace('\xa0', ''))  # Удалить неразрывные пробелы и преобразовать в целое число
             if amount < 0:
+                if name in user_ids:
+                    name = user_ids[name]  # Использовать user_id вместо имени
                 message += f"{name} - {-amount}\n"
         except ValueError:
             # Если значение не является числом, пропустить его
