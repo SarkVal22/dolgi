@@ -73,7 +73,7 @@ async def get_debts(update: Update, context: CallbackContext) -> None:
             continue
 
     if message == "ДОЛГИ 🤡\n\n":
-        message = "Нет задолженностей."
+        message = "Нет задолженностей"
 
     await update.message.reply_text(message, parse_mode='HTML')
 
@@ -91,18 +91,16 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
         try:
             amount = int(amount.replace('\xa0', ''))  # Удалить неразрывные пробелы и преобразовать в целое число
             if amount > 0:  # Включаем только тех, у кого положительные значения
-                if name in user_ids:
-                    name = user_ids[name]  # Использовать user_id вместо имени
-                message += f"{name}, {phone}, {bank}\n"
+                # Используем имя вместо user_id и добавляем сумму
+                message += f"{name}, {phone}, {bank}, {amount} \n"
         except ValueError:
             # Если значение не является числом, пропустить его
             continue
 
     if message == "КОМУ ПЕРЕВОДИТЬ 💸\n\n":
-        message = "Нет данных для перевода."
+        message = "Нет плюсовых игроков"
 
     await update.message.reply_text(message, parse_mode='HTML')
-
 
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
