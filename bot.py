@@ -77,10 +77,38 @@ async def get_debts(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(message, parse_mode='HTML')
 
+# Новая команда "komu_kidat"
+async def komu_kidat(update: Update, context: CallbackContext) -> None:
+    debts = sheet.row_values(560)  # Имена (строка 560)
+    amounts = sheet.row_values(562)  # Долги (строка 562)
+    phones = sheet.row_values(563)  # Номера телефонов (строка 563)
+    banks = sheet.row_values(564)  # Банки (строка 564)
+
+    message = "КОМУ ПЕРЕВОДИТЬ 💸\n\n"
+    for name, amount, phone, bank in zip(debts, amounts, phones, banks):
+        if name == "Проверка":
+            continue
+        try:
+            amount = int(amount.replace('\xa0', ''))  # Удалить неразрывные пробелы и преобразовать в целое число
+            if amount > 0:  # Включаем только тех, у кого положительные значения
+                if name in user_ids:
+                    name = user_ids[name]  # Использовать user_id вместо имени
+                message += f"{name}, {phone}, {bank}\n"
+        except ValueError:
+            # Если значение не является числом, пропустить его
+            continue
+
+    if message == "КОМУ ПЕРЕВОДИТЬ 💸\n\n":
+        message = "Нет данных для перевода."
+
+    await update.message.reply_text(message, parse_mode='HTML')
+
+
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("dolgi", get_debts))
+    application.add_handler(CommandHandler("komu_kidat", komu_kidat))
 
     # Запуск бота
     application.run_polling()
