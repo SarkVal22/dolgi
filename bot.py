@@ -1,11 +1,9 @@
 import logging
 import nest_asyncio
-import random
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
-from collections import namedtuple
-from oauth2client.service_account import ServiceAccountCredentials
+from telegram import Update
+from telegram.ext import Application, CommandHandler, CallbackContext
 import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
 
@@ -26,8 +24,33 @@ credentials = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_CREDENTIAL
 client = gspread.authorize(credentials)
 sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
+# Словарь с именами и user_id (не будет использоваться в этой команде)
+user_ids = {
+    'Арсен': '@AKukhmazov',
+    'Андрей Ж': '@zhandnab',
+    'Андрей А': '@Alenin_Andrey',
+    'Валера Б': '@valerkas',
+    'Валера С': '@ValeriySark',
+    'Зевс': '@Zeus7717',
+    'Марат': '@Marat1k77',
+    'Данзан': '@gunndanz',
+    'Андрей С': '@Premove',
+    'Евгений А': '@abram88',
+    'Евгений М': '@Hate_m11',
+    'Михаил Б': '@pryanni',
+    'Костя': '@hlopkost',
+    'Артем Г': '@Artem_Galaktionov22',
+    'Борис': '@Pimienti',
+    'Кирилл': '@Batko2003',
+    'Егор': '@yagr55',
+    'Влад': '@blvvld',
+    'Мария': '@thaidancer',
+    'Стас': '@s4fbrc4',
+    'Имя1': '@user_id1',
+    'Имя2': '@user_id2',
+    # Добавьте другие имена и их user_id
+}
 
-# Функции для работы с долгами и переведением
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Привет! Отправь /dolgi, чтобы получить список задолжников.')
 
@@ -48,10 +71,11 @@ async def get_debts(update: Update, context: CallbackContext) -> None:
             continue
 
     if message == "ДОЛГИ 🤡\n\n":
-        message = "Нет задолженностей"
+        message = "Нет задолженностей."
 
     await update.message.reply_text(message, parse_mode='HTML')
 
+# Новая команда "komu_kidat"
 async def komu_kidat(update: Update, context: CallbackContext) -> None:
     debts = sheet.row_values(560)  # Имена (строка 560)
     amounts = sheet.row_values(562)  # Долги (строка 562)
@@ -65,13 +89,14 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
         try:
             amount = int(amount.replace('\xa0', ''))  # Удалить неразрывные пробелы и преобразовать в целое число
             if amount > 0:  # Включаем только тех, у кого положительные значения
-                message += f"{name}, {phone}, {bank}, {amount} \n"
+                # Используем имя вместо user_id и добавляем сумму
+                message += f"{name}, {phone}, {bank}, {amount} руб.\n"
         except ValueError:
             # Если значение не является числом, пропустить его
             continue
 
     if message == "КОМУ ПЕРЕВОДИТЬ 💸\n\n":
-        message = "Нет плюсовых игроков"
+        message = "Нет данных для перевода."
 
     await update.message.reply_text(message, parse_mode='HTML')
 
@@ -80,7 +105,6 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("dolgi", get_debts))
     application.add_handler(CommandHandler("komu_kidat", komu_kidat))
-
 
     # Запуск бота
     application.run_polling()
