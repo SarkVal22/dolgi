@@ -58,7 +58,10 @@ roulette_participants = []
 
 # Функции для определения комбинаций покера
 def rank_cards(hand):
-    values = sorted(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].index(card[:-1]) for card in hand], reverse=True)
+    values = sorted(
+        ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].index(card[:-1]) for card in hand
+        ], reverse=True
+    )
     suits = [card[-1] for card in hand]
     return values, suits
 
