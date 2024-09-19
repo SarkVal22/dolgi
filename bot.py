@@ -92,7 +92,7 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
             amount = int(amount.replace('\xa0', ''))  # Удалить неразрывные пробелы и преобразовать в целое число
             if amount > 0:  # Включаем только тех, у кого положительные значения
                 # Используем имя вместо user_id и добавляем сумму
-                message += f"{name}, {phone}, {bank}, {amount} руб.\n"
+                message += f"{name}, {phone}, {bank}, {amount} \n"
         except ValueError:
             # Если значение не является числом, пропустить его
             continue
