@@ -122,6 +122,9 @@ async def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = query.from_user
     
+    # Log to verify button presses
+    logging.info(f"Button pressed by {user.id} ({user.full_name})")
+
     if len(roulette_participants) >= 2:
         await query.answer(text="Участников уже достаточно.")
         return
@@ -129,8 +132,11 @@ async def button(update: Update, context: CallbackContext) -> None:
     if user.id not in [p['id'] for p in roulette_participants]:
         roulette_participants.append({'id': user.id, 'name': user.full_name})
         await query.answer(text="Вы приняли участие!")
-    
+
+    logging.info(f"Current participants: {roulette_participants}")
+
     if len(roulette_participants) == 2:
+        logging.info("Starting roulette")
         context.job_queue.run_once(start_roulette, 1, context=update.message.chat_id)
 
 async def start_roulette(context: CallbackContext) -> None:
@@ -189,16 +195,3 @@ async def start_roulette(context: CallbackContext) -> None:
     await context.bot.send_message(chat_id, f"Победитель: {winner}")
 
 def main() -> None:
-    global application
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("dolgi", get_debts))
-    application.add_handler(CommandHandler("komu_kidat", komu_kidat))
-    application.add_handler(CommandHandler("ruletka", ruletka))
-    application.add_handler(CallbackQueryHandler(button))
-    
-    # Запуск бота
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
