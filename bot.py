@@ -122,7 +122,7 @@ async def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = query.from_user
 
-    # Log to verify button presses
+    # Логирование нажатий кнопок
     logging.info(f"Button pressed by {user.id} ({user.full_name})")
 
     if len(roulette_participants) >= 2:
