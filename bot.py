@@ -121,7 +121,7 @@ async def ruletka(update: Update, context: CallbackContext) -> None:
 async def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = query.from_user
-    
+
     # Log to verify button presses
     logging.info(f"Button pressed by {user.id} ({user.full_name})")
 
@@ -141,7 +141,7 @@ async def button(update: Update, context: CallbackContext) -> None:
             text=f"Участвуют:\n1. {roulette_participants[0]['name']} {user_ids.get(roulette_participants[0]['name'], '')}\n2. {roulette_participants[1]['name']} {user_ids.get(roulette_participants[1]['name'], '')}\n\nНачинаем раздачу...",
             reply_markup=None
         )
-        
+
         # Запускаем раздачу карт
         context.job_queue.run_once(start_roulette, 1, context=query.message.chat_id)
 
@@ -150,7 +150,7 @@ async def start_roulette(context: CallbackContext) -> None:
     if len(roulette_participants) < 2:
         await context.bot.send_message(chat_id, "Недостаточно участников для игры.")
         return
-    
+
     # Создаем колоду и раздаем карты
     suits = ['♠', '♥', '♦', '♣']
     ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
@@ -188,7 +188,7 @@ async def start_roulette(context: CallbackContext) -> None:
     # Определение победителя
     player1_strength = hand_strength(player1_hand + flop + [turn, river])
     player2_strength = hand_strength(player2_hand + flop + [turn, river])
-    
+
     if player1_strength > player2_strength:
         winner = roulette_participants[0]['name']
     elif player2_strength > player1_strength:
