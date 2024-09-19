@@ -195,3 +195,15 @@ async def start_roulette(context: CallbackContext) -> None:
     await context.bot.send_message(chat_id, f"Победитель: {winner}")
 
 def main() -> None:
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("dolgi", get_debts))
+    application.add_handler(CommandHandler("komu_kidat", komu_kidat))
+    application.add_handler(CommandHandler("ruletka", ruletka))
+    application.add_handler(CallbackQueryHandler(button))
+
+    # Запуск бота
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
