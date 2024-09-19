@@ -1,13 +1,13 @@
 import logging
 import nest_asyncio
+import random
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
-import gspread
+from collections import namedtuple
 from oauth2client.service_account import ServiceAccountCredentials
+import gspread
 import os
 import json
-import random
-import asyncio
 
 # Применение nest_asyncio для решения проблемы с циклом событий
 nest_asyncio.apply()
@@ -26,74 +26,53 @@ credentials = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_CREDENTIAL
 client = gspread.authorize(credentials)
 sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
-# Словарь с именами и user_id
-user_ids = {
-    'Арсен': '@AKukhmazov',
-    'Андрей Ж': '@zhandnab',
-    'Андрей А': '@Alenin_Andrey',
-    'Валера Б': '@valerkas',
-    'Валера С': '@ValeriySark',
-    'Зевс': '@Zeus7717',
-    'Марат': '@Marat1k77',
-    'Данзан': '@gunndanz',
-    'Андрей С': '@Premove',
-    'Евгений А': '@abram88',
-    'Евгений М': '@Hate_m11',
-    'Михаил Б': '@pryanni',
-    'Костя': '@hlopkost',
-    'Артем Г': '@Artem_Galaktionov22',
-    'Борис': '@Pimienti',
-    'Кирилл': '@Batko2003',
-    'Егор': '@yagr55',
-    'Влад': '@blvvld',
-    'Мария': '@thaidancer',
-    'Стас': '@s4fbrc4',
-    'Имя1': '@user_id1',
-    'Имя2': '@user_id2',
-    # Добавьте другие имена и их user_id
-}
+# Глобальные переменные
+participants = []
+MAX_PARTICIPANTS = 2
 
-# Хранилище участников рулетки
-roulette_participants = []
+Card = namedtuple('Card', ['suit', 'rank'])
 
-# Функции для определения комбинаций покера
-def rank_cards(hand):
-    # Преобразуем каждую карту в её значение и отсортируем по убыванию
-    values = sorted(
-        (['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].index(card[:-1]) for card in hand),
-        reverse=True
-    )
-    
-    # Извлечем масти карт
-    suits = [card[-1] for card in hand]
-    
-    return values, suits
+# Колода карт
+SUITS = ['♠', '♥', '♦', '♣']
+RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+deck = [Card(suit, rank) for suit in SUITS for rank in RANKS]
 
-def is_flush(suits):
-    return len(set(suits)) == 1
+# Определение комбинаций в покере
+def hand_rank(hand):
+    """Возвращает числовое значение руки для упрощенного сравнения рук."""
+    values = sorted(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].index(card.rank) for card in hand], reverse=True)
+    suits = [card.suit for card in hand]
+    is_flush = len(set(suits)) == 1
+    is_straight = values == list(range(values[0], values[0] - 5, -1))
+    if values == [12, 3, 2, 1, 0]:  # Особый случай для стрита до туза
+        values = [4, 3, 2, 1, 0]
+    counts = {value: values.count(value) for value in values}
+    if is_straight and is_flush:
+        return (8, values)
+    elif 4 in counts.values():
+        return (7, counts)
+    elif 3 in counts.values() and 2 in counts.values():
+        return (6, counts)
+    elif is_flush:
+        return (5, values)
+    elif is_straight:
+        return (4, values)
+    elif 3 in counts.values():
+        return (3, counts)
+    elif list(counts.values()).count(2) == 2:
+        return (2, counts)
+    elif 2 in counts.values():
+        return (1, counts)
+    else:
+        return (0, values)
 
-def is_straight(values):
-    return values == list(range(values[0], values[0] - 5, -1))
+def get_winner(hands):
+    """Определяет победителя из списка рук на основе комбинации."""
+    ranked_hands = [(hand_rank(hand), hand) for hand in hands]
+    ranked_hands.sort(reverse=True)
+    return ranked_hands[0]
 
-def evaluate_hand(hand):
-    values, suits = rank_cards(hand)
-    if is_straight(values) and is_flush(suits):
-        return "ROYAL FLUSH" if values[0] == 12 else "STRAIGHT FLUSH"
-    if len(set(values)) == 2:
-        return "FOUR OF A KIND" if values.count(values[0]) in [1, 4] else "FULL HOUSE"
-    if is_flush(suits):
-        return "FLUSH"
-    if is_straight(values):
-        return "STRAIGHT"
-    if len(set(values)) == 3:
-        return "THREE OF A KIND" if values.count(values[0]) in [1, 3] else "TWO PAIR"
-    if len(set(values)) == 4:
-        return "ONE PAIR"
-    return "HIGH CARD"
-
-def hand_strength(hand):
-    return random.randint(1, 100)  # Для простоты, замените на реальную оценку
-
+# Функции для работы с долгами и переведением
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Привет! Отправь /dolgi, чтобы получить список задолжников.')
 
@@ -101,20 +80,19 @@ async def get_debts(update: Update, context: CallbackContext) -> None:
     debts = sheet.row_values(560)  # Имена (строка 560)
     amounts = sheet.row_values(562)  # Долги (строка 562)
 
-    message = "📉 ДОЛГИ 🤡\n\n"
+    message = "ДОЛГИ 🤡\n\n"
     for name, amount in zip(debts, amounts):
         if name == "Проверка":
             continue
         try:
             amount = int(amount.replace('\xa0', ''))  # Удалить неразрывные пробелы и преобразовать в целое число
             if amount < 0:
-                if name in user_ids:
-                    name = user_ids[name]  # Использовать user_id вместо имени
                 message += f"{name} - {-amount}\n"
         except ValueError:
+            # Если значение не является числом, пропустить его
             continue
 
-    if message == "📉 ДОЛГИ 🤡\n\n":
+    if message == "ДОЛГИ 🤡\n\n":
         message = "Нет задолженностей"
 
     await update.message.reply_text(message, parse_mode='HTML')
@@ -125,7 +103,7 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
     phones = sheet.row_values(563)  # Номера телефонов (строка 563)
     banks = sheet.row_values(564)  # Банки (строка 564)
 
-    message = "💸 КОМУ ПЕРЕВОДИТЬ 💸\n\n"
+    message = "КОМУ ПЕРЕВОДИТЬ 💸\n\n"
     for name, amount, phone, bank in zip(debts, amounts, phones, banks):
         if name == "Проверка":
             continue
@@ -134,125 +112,81 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
             if amount > 0:  # Включаем только тех, у кого положительные значения
                 message += f"{name}, {phone}, {bank}, {amount} \n"
         except ValueError:
+            # Если значение не является числом, пропустить его
             continue
 
-    if message == "💸 КОМУ ПЕРЕВОДИТЬ 💸\n\n":
+    if message == "КОМУ ПЕРЕВОДИТЬ 💸\n\n":
         message = "Нет плюсовых игроков"
 
     await update.message.reply_text(message, parse_mode='HTML')
 
-async def ruletka(update: Update, context: CallbackContext) -> None:
-    global roulette_participants
-    roulette_participants = []
-
-    keyboard = [[InlineKeyboardButton("Принять участие", callback_data='join')]]
+# Функции для рулетки
+async def start(update: Update, context: CallbackContext) -> None:
+    keyboard = [[InlineKeyboardButton("Принять участие в рулетке", callback_data='register')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(
-        '🃏 Принять участие в рулетке 🃏', 
-        reply_markup=reply_markup
-    )
+    await update.message.reply_text('Принять участие в рулетке:', reply_markup=reply_markup)
 
-async def button(update: Update, context: CallbackContext) -> None:
+async def register_for_roulette(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = query.from_user
-
-    logging.info(f"Button pressed by {user.id} ({user.full_name})")
-
-    if len(roulette_participants) >= 2:
-        await query.answer(text="🛑 Участников уже достаточно.")
+    if user.id in [p['id'] for p in participants]:
+        await query.answer('Вы уже зарегистрированы.')
         return
-    
-    if user.id not in [p['id'] for p in roulette_participants]:
-        roulette_participants.append({'id': user.id, 'name': user.full_name})
-        await query.answer(text="✅ Вы приняли участие!")
 
-    logging.info(f"Current participants: {roulette_participants}")
+    if len(participants) < MAX_PARTICIPANTS:
+        participants.append({'id': user.id, 'name': user.username})
+        await query.answer('Вы успешно зарегистрированы! 🎉')
+        if len(participants) == MAX_PARTICIPANTS:
+            # Запускаем раздачу после регистрации двух участников
+            await start_roulette(update, context)
+    else:
+        await query.answer('Регистрация уже закрыта.')
 
-    if len(roulette_participants) == 2:
-        # Удаляем кнопку и сообщение о том, что участники записаны
-        await query.message.edit_text(
-            text=f"🎉 Участвуют:\n1. {roulette_participants[0]['name']} {user_ids.get(roulette_participants[0]['name'], '')}\n2. {roulette_participants[1]['name']} {user_ids.get(roulette_participants[1]['name'], '')}\n\n🚀 Начинаем раздачу...",
-            reply_markup=None
-        )
+async def start_roulette(update: Update, context: CallbackContext) -> None:
+    # Убедимся, что раздача начинается только после регистрации двух участников
+    if len(participants) < MAX_PARTICIPANTS:
+        return
 
-        # Создаем колоду и раздаем карты
-        suits = ['♠', '♥', '♦', '♣']
-        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-        deck = [f'{rank}{suit}' for suit in suits for rank in ranks]
-        random.shuffle(deck)
+    # Выводим список участников
+    participants_names = ", ".join([f"@{p['name']}" for p in participants])
+    message = f"Участники: {participants_names}\n\nРаздача карт начинается! 🎲"
+    await update.message.reply_text(message)
 
-        def deal_hand():
-            return [deck.pop(), deck.pop()]
+    # Перемешиваем колоду и раздаем по две карты каждому участнику
+    random.shuffle(deck)
+    hands = {p['id']: [deck.pop(), deck.pop()] for p in participants}
 
-        # Раздаем руки игрокам
-        player1_hand = deal_hand()
-        player2_hand = deal_hand()
+    # Для имитации раздачи и определения победителя
+    flop = [deck.pop() for _ in range(3)]
+    turn = deck.pop()
+    river = deck.pop()
 
-        # Создаем флоп, терн и ривер
-        community_cards = []
-        for _ in range(3):
-            community_cards.append(deck.pop())
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"🃏 Флоп: {' '.join(community_cards)}"
-        )
-        await asyncio.sleep(5)
+    def format_hand(hand):
+        return ' '.join(f"{card.rank}{card.suit}" for card in hand)
 
-        community_cards.append(deck.pop())
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"🃏 Тёрн: {' '.join(community_cards)}"
-        )
-        await asyncio.sleep(5)
+    # Объявляем карты
+    hand_messages = [f"@{p['name']} получил {format_hand(hand)}" for p, hand in zip(participants, hands.values())]
+    await update.message.reply_text("\n".join(hand_messages))
 
-        community_cards.append(deck.pop())
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"🃏 Ривер: {' '.join(community_cards)}"
-        )
-        await asyncio.sleep(5)
+    # Показываем флоп, терн и ривер
+    await update.message.reply_text(f"Флоп: {format_hand(flop)}")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Терн: {format_hand([turn])}")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Ривер: {format_hand([river])}")
 
-        # Определяем победителя
-        player1_hand += community_cards
-        player2_hand += community_cards
-
-        player1_hand_type = evaluate_hand(player1_hand)
-        player2_hand_type = evaluate_hand(player2_hand)
-
-        player1_strength = hand_strength(player1_hand)
-        player2_strength = hand_strength(player2_hand)
-
-        if player1_strength > player2_strength:
-            winner = roulette_participants[0]
-            winner_hand_type = player1_hand_type
-        elif player1_strength < player2_strength:
-            winner = roulette_participants[1]
-            winner_hand_type = player2_hand_type
-        else:
-            winner = None
-            winner_hand_type = "Ничья"
-
-        if winner:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"🏆 Победитель: {winner['name']} с комбинацией {winner_hand_type}!\n🃏 Руки:\n1. {player1_hand} (Игрок 1)\n2. {player2_hand} (Игрок 2)"
-            )
-        else:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"🤝 Ничья! Руки:\n1. {roulette_participants[0]['name']}: {player1_hand}\n2. {roulette_participants[1]['name']}: {player2_hand}"
-            )
-
-        roulette_participants = []
+    # Определяем победителя
+    all_hands = [hand + flop + [turn, river] for hand in hands.values()]
+    winner = get_winner(all_hands)
+    winner_index = all_hands.index(winner[1])
+    winner_name = participants[winner_index]['name']
+    hand_description = format_hand(winner[1])
+    await update.message.reply_text(f"🏆 Победитель: @{winner_name}\nКомбинация: {hand_description}")
 
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("dolgi", get_debts))
     application.add_handler(CommandHandler("komu_kidat", komu_kidat))
-    application.add_handler(CommandHandler("ruletka", ruletka))
-    application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(CallbackQueryHandler(register_for_roulette, pattern='register'))
 
     # Запуск бота
     application.run_polling()
