@@ -1,12 +1,11 @@
 import logging
 import nest_asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler  # Импортируем CallbackQueryHandler
+from telegram import Update
+from telegram.ext import Application, CommandHandler, CallbackContext
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
-import random
 
 # Применение nest_asyncio для решения проблемы с циклом событий
 nest_asyncio.apply()
@@ -52,25 +51,9 @@ user_ids = {
     # Добавьте другие имена и их user_id
 }
 
-# Функция для генерации покерных карт
-def generate_hand():
-    suits = ['♠', '♣', '♦', '♥']
-    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-    deck = [f'{rank}{suit}' for suit in suits for rank in ranks]
-    random.shuffle(deck)
-    return [deck.pop(), deck.pop()]
-
-def evaluate_hand(cards):
-    ranks = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
-             'J': 11, 'Q': 12, 'K': 13, 'A': 14}
-    hand = sorted(cards, key=lambda card: ranks[card[:-1]], reverse=True)
-    return hand
-
-# Команда "start"
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Привет! Отправь /dolgi, чтобы получить список задолжников.')
 
-# Команда "dolgi"
 async def get_debts(update: Update, context: CallbackContext) -> None:
     debts = sheet.row_values(560)  # Имена (строка 560)
     amounts = sheet.row_values(562)  # Долги (строка 562)
@@ -119,65 +102,15 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(message, parse_mode='HTML')
 
-# Команда "ruletka"
-async def ruletka(update: Update, context: CallbackContext) -> None:
-    keyboard = [
-        [InlineKeyboardButton("Участвую", callback_data='join')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Нажмите кнопку, чтобы участвовать в рулетке!', reply_markup=reply_markup)
-
-# Обработчик нажатий на кнопки
-async def button(update: Update, context: CallbackContext) -> None:
-    query = update.callback_query
-    user = query.from_user
-
-    if 'players' not in context.chat_data:
-        context.chat_data['players'] = []
-
-    if len(context.chat_data['players']) < 2:
-        if user.id not in context.chat_data['players']:
-            context.chat_data['players'].append(user.id)
-            await query.answer()
-            await query.edit_message_text(text=f"Вы добавлены в очередь. ({len(context.chat_data['players'])}/2)")
-        else:
-            await query.answer("Вы уже участвуете в рулетке.")
-    else:
-        await query.answer("Рулетка уже запущена. Подождите окончания текущего раунда.")
-
-    if len(context.chat_data['players']) == 2:
-        player1 = context.chat_data['players'][0]
-        player2 = context.chat_data['players'][1]
-
-        # Розыгрыш карт
-        hand1 = generate_hand()
-        hand2 = generate_hand()
-        community_cards = [generate_hand() for _ in range(5)]
-
-        # Подготовка сообщений
-        messages = []
-        messages.append(f"Карманные карты:\nИгрок 1: {hand1}\nИгрок 2: {hand2}\n")
-        messages.append(f"Флоп: {community_cards[0]}\n")
-        messages.append(f"Терн: {community_cards[1]}\n")
-        messages.append(f"Ривер: {community_cards[2]}\n")
-        
-        # Объявление победителя (Пример, не реализован настоящий алгоритм оценки рук)
-        winner = random.choice([player1, player2])
-        messages.append(f"Победитель: {winner} с комбинацией {evaluate_hand(hand1 + community_cards) if winner == player1 else evaluate_hand(hand2 + community_cards)}")
-
-        for msg in messages:
-            await update.message.reply_text(msg)
-
-        # Очистка данных после завершения раунда
-        context.chat_data['players'] = []
-
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("dolgi", get_debts))
     application.add_handler(CommandHandler("komu_kidat", komu_kidat))
-    application.add_handler(CommandHandler("ruletka", ruletka))
-    application.add_handler(CallbackQueryHandler(button))
+    
 
     # Запуск бота
-    application.run_poll
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
