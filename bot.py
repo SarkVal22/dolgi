@@ -58,11 +58,14 @@ roulette_participants = []
 
 # Функции для определения комбинаций покера
 def rank_cards(hand):
+    # Преобразуем каждую карту в её значение и отсортируем по убыванию
     values = sorted(
         ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].index(card[:-1]) for card in hand
-        ], reverse=True
-    )
+    , reverse=True)
+    
+    # Извлечем масти карт
     suits = [card[-1] for card in hand]
+    
     return values, suits
 
 def is_flush(suits):
