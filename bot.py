@@ -56,8 +56,7 @@ user_ids = {
 # Хранилище участников рулетки
 roulette_participants = []
 
-# Функции для определения силы руки и комбинаций
-
+# Функции для определения комбинаций покера
 def rank_cards(hand):
     values = sorted(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].index(card[:-1]) for card in hand], reverse=True)
     suits = [card[-1] for card in hand]
@@ -179,43 +178,31 @@ async def button(update: Update, context: CallbackContext) -> None:
         def deal_hand():
             return [deck.pop(), deck.pop()]
 
-        def evaluate_hand(hand):
-            values, suits = rank_cards(hand)
-            return evaluate_hand(hand)
-
+        # Раздаем руки игрокам
         player1_hand = deal_hand()
         player2_hand = deal_hand()
 
-        logging.info(f"Player 1 hand: {player1_hand}")
-        logging.info(f"Player 2 hand: {player2_hand}")
-
-        # Отправляем руки игрокам
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"🃏 Руки участников:\n1. {roulette_participants[0]['name']}: {player1_hand}\n2. {roulette_participants[1]['name']}: {player2_hand}"
-        )
-
-        # Показываем флоп, терн и ривер
+        # Создаем флоп, терн и ривер
         community_cards = []
         for _ in range(3):
             community_cards.append(deck.pop())
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"🃏 Флоп: {community_cards}"
+            text=f"🃏 Флоп: {' '.join(community_cards)}"
         )
         await asyncio.sleep(5)
 
         community_cards.append(deck.pop())
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"🃏 Тёрн: {community_cards}"
+            text=f"🃏 Тёрн: {' '.join(community_cards)}"
         )
         await asyncio.sleep(5)
 
         community_cards.append(deck.pop())
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"🃏 Ривер: {community_cards}"
+            text=f"🃏 Ривер: {' '.join(community_cards)}"
         )
         await asyncio.sleep(5)
 
@@ -242,7 +229,7 @@ async def button(update: Update, context: CallbackContext) -> None:
         if winner:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text=f"🏆 Победитель: {winner['name']} с комбинацией {winner_hand_type}!\n🃏 Руки: {player1_hand} (Player 1) vs {player2_hand} (Player 2)"
+                text=f"🏆 Победитель: {winner['name']} с комбинацией {winner_hand_type}!\n🃏 Руки:\n1. {player1_hand} (Игрок 1)\n2. {player2_hand} (Игрок 2)"
             )
         else:
             await context.bot.send_message(
