@@ -1,11 +1,12 @@
 import logging
 import nest_asyncio
-from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler  # Импортируем CallbackQueryHandler
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
+import random
 
 # Применение nest_asyncio для решения проблемы с циклом событий
 nest_asyncio.apply()
@@ -65,9 +66,11 @@ def evaluate_hand(cards):
     hand = sorted(cards, key=lambda card: ranks[card[:-1]], reverse=True)
     return hand
 
+# Команда "start"
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Привет! Отправь /dolgi, чтобы получить список задолжников.')
 
+# Команда "dolgi"
 async def get_debts(update: Update, context: CallbackContext) -> None:
     debts = sheet.row_values(560)  # Имена (строка 560)
     amounts = sheet.row_values(562)  # Долги (строка 562)
@@ -175,10 +178,6 @@ def main() -> None:
     application.add_handler(CommandHandler("komu_kidat", komu_kidat))
     application.add_handler(CommandHandler("ruletka", ruletka))
     application.add_handler(CallbackQueryHandler(button))
-    
 
     # Запуск бота
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
+    application.run_poll
