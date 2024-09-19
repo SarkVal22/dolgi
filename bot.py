@@ -1,6 +1,6 @@
 import logging
 import nest_asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -188,7 +188,7 @@ async def ruletka(update: Update, context: CallbackContext) -> None:
 
         context.bot.send_message(chat_id, f"Победитель: {winner}!\nКомбинация: {player1_hand if winner == roulette_participants[0]['name'] else player2_hand}")
 
-    # Обработчик нажатий кнопок
+    # Добавление обработчика кнопок
     application.add_handler(CallbackQueryHandler(button))
 
 def main() -> None:
