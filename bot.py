@@ -122,7 +122,6 @@ async def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = query.from_user
 
-    # Логирование нажатий кнопок
     logging.info(f"Button pressed by {user.id} ({user.full_name})")
 
     if len(roulette_participants) >= 2:
@@ -142,61 +141,55 @@ async def button(update: Update, context: CallbackContext) -> None:
             reply_markup=None
         )
 
-        # Запускаем раздачу карт
-        context.job_queue.run_once(start_roulette, 1, context=query.message.chat_id)
+        # Запускаем раздачу карт сразу
+        chat_id = query.message.chat_id
+        logging.info("Starting roulette...")
 
-async def start_roulette(context: CallbackContext) -> None:
-    chat_id = context.job.context
-    if len(roulette_participants) < 2:
-        await context.bot.send_message(chat_id, "Недостаточно участников для игры.")
-        return
+        # Создаем колоду и раздаем карты
+        suits = ['♠', '♥', '♦', '♣']
+        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+        deck = [f'{rank}{suit}' for suit in suits for rank in ranks]
+        random.shuffle(deck)
 
-    # Создаем колоду и раздаем карты
-    suits = ['♠', '♥', '♦', '♣']
-    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-    deck = [f'{rank}{suit}' for suit in suits for rank in ranks]
-    random.shuffle(deck)
+        def deal_hand():
+            return [deck.pop(), deck.pop()]
 
-    def deal_hand():
-        return [deck.pop(), deck.pop()]
+        def hand_strength(hand):
+            return random.randint(1, 100)
 
-    def hand_strength(hand):
-        # Простой пример: вернуть случайное число для оценки силы руки
-        return random.randint(1, 100)
+        player1_hand = deal_hand()
+        player2_hand = deal_hand()
 
-    player1_hand = deal_hand()
-    player2_hand = deal_hand()
-    
-    message = f"Карманные карты:\n"
-    message += f"1. {roulette_participants[0]['name']}: {', '.join(player1_hand)}\n"
-    message += f"2. {roulette_participants[1]['name']}: {', '.join(player2_hand)}\n"
+        message = f"Карманные карты:\n"
+        message += f"1. {roulette_participants[0]['name']}: {', '.join(player1_hand)}\n"
+        message += f"2. {roulette_participants[1]['name']}: {', '.join(player2_hand)}\n"
 
-    await context.bot.send_message(chat_id, message)
+        await context.bot.send_message(chat_id, message)
 
-    await asyncio.sleep(5)
-    flop = [deck.pop() for _ in range(3)]
-    await context.bot.send_message(chat_id, f"Флоп: {', '.join(flop)}")
+        await asyncio.sleep(5)
+        flop = [deck.pop() for _ in range(3)]
+        await context.bot.send_message(chat_id, f"Флоп: {', '.join(flop)}")
 
-    await asyncio.sleep(5)
-    turn = deck.pop()
-    await context.bot.send_message(chat_id, f"Терн: {turn}")
+        await asyncio.sleep(5)
+        turn = deck.pop()
+        await context.bot.send_message(chat_id, f"Терн: {turn}")
 
-    await asyncio.sleep(5)
-    river = deck.pop()
-    await context.bot.send_message(chat_id, f"Ривер: {river}")
+        await asyncio.sleep(5)
+        river = deck.pop()
+        await context.bot.send_message(chat_id, f"Ривер: {river}")
 
-    # Определение победителя
-    player1_strength = hand_strength(player1_hand + flop + [turn, river])
-    player2_strength = hand_strength(player2_hand + flop + [turn, river])
+        # Определение победителя
+        player1_hand.extend(flop + [turn, river])
+        player2_hand.extend(flop + [turn, river])
 
-    if player1_strength > player2_strength:
-        winner = roulette_participants[0]['name']
-    elif player2_strength > player1_strength:
-        winner = roulette_participants[1]['name']
-    else:
-        winner = "Ничья"
+        player1_strength = hand_strength(player1_hand)
+        player2_strength = hand_strength(player2_hand)
 
-    await context.bot.send_message(chat_id, f"Победитель: {winner}")
+        winner = 1 if player1_strength > player2_strength else 2
+        winning_hand = player1_hand if winner == 1 else player2_hand
+        winning_name = roulette_participants[0]['name'] if winner == 1 else roulette_participants[1]['name']
+
+        await context.bot.send_message(chat_id, f"Победитель: {winning_name} с комбинацией: {', '.join(winning_hand)}")
 
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
