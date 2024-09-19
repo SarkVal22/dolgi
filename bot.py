@@ -102,11 +102,78 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(message, parse_mode='HTML')
 
+# Храним список игроков, которые нажали кнопку
+players = []
+
+# Команда для запуска игры с кнопкой
+async def ruletka(update: Update, context: CallbackContext) -> None:
+    keyboard = [
+        [InlineKeyboardButton("Присоединиться к игре", callback_data='join_game')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text('Нажмите кнопку ниже, чтобы присоединиться к игре:', reply_markup=reply_markup)
+
+# Обработчик нажатий кнопок
+async def button(update: Update, context: CallbackContext) -> None:
+    global players
+    query = update.callback_query
+    user = query.from_user
+    
+    # Проверяем, не добавлен ли игрок ранее
+    if user.id not in [player.id for player in players]:
+        players.append(user)
+        await query.answer(f'{user.first_name} присоединился к игре!')
+    
+    # Если набралось два игрока, запускаем игру
+    if len(players) == 2:
+        await query.message.edit_text(f'Игроки: {players[0].first_name} и {players[1].first_name}. Начинаем раздачу карт!')
+        
+        # Вызываем функцию для раздачи карт
+        await start_poker_game(query.message, context)
+
+# Функция для раздачи карт
+async def start_poker_game(message, context: CallbackContext) -> None:
+    global players
+    
+    deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A'] * 4
+    random.shuffle(deck)
+    
+    # Раздача карманных карт игрокам
+    player_1_hand = [deck.pop(), deck.pop()]
+    player_2_hand = [deck.pop(), deck.pop()]
+    
+    # Первое сообщение: карманные карты
+    await message.reply_text(f'{players[0].first_name}: {player_1_hand[0]}, {player_1_hand[1]}\n'
+                             f'{players[1].first_name}: {player_2_hand[0]}, {player_2_hand[1]}')
+    
+    # Флоп
+    flop = [deck.pop(), deck.pop(), deck.pop()]
+    await message.reply_text(f'Флоп: {flop[0]}, {flop[1]}, {flop[2]}')
+    
+    # Терн
+    turn = deck.pop()
+    await message.reply_text(f'Терн: {turn}')
+    
+    # Ривер
+    river = deck.pop()
+    await message.reply_text(f'Ривер: {river}')
+    
+    # Определение победителя (упрощенно, просто случайный выбор)
+    winner = random.choice(players)
+    await message.reply_text(f'Победитель: {winner.first_name}!')
+    
+    # Очищаем список игроков для следующей игры
+    players = []
+
+
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("dolgi", get_debts))
     application.add_handler(CommandHandler("komu_kidat", komu_kidat))
+    application.add_handler(CommandHandler("ruletka", ruletka))
+    application.add_handler(CallbackQueryHandler(button, pattern='join_game'))
 
     # Запуск бота
     application.run_polling()
