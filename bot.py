@@ -51,6 +51,20 @@ user_ids = {
     # Добавьте другие имена и их user_id
 }
 
+# Функция для генерации покерных карт
+def generate_hand():
+    suits = ['♠', '♣', '♦', '♥']
+    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    deck = [f'{rank}{suit}' for suit in suits for rank in ranks]
+    random.shuffle(deck)
+    return [deck.pop(), deck.pop()]
+
+def evaluate_hand(cards):
+    ranks = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+             'J': 11, 'Q': 12, 'K': 13, 'A': 14}
+    hand = sorted(cards, key=lambda card: ranks[card[:-1]], reverse=True)
+    return hand
+
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Привет! Отправь /dolgi, чтобы получить список задолжников.')
 
@@ -102,70 +116,57 @@ async def komu_kidat(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(message, parse_mode='HTML')
 
-# Храним список игроков, которые нажали кнопку
-players = []
-
-# Команда для запуска игры с кнопкой
+# Команда "ruletka"
 async def ruletka(update: Update, context: CallbackContext) -> None:
     keyboard = [
-        [InlineKeyboardButton("Присоединиться к игре", callback_data='join_game')]
+        [InlineKeyboardButton("Участвую", callback_data='join')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text('Нажмите кнопку ниже, чтобы присоединиться к игре:', reply_markup=reply_markup)
+    await update.message.reply_text('Нажмите кнопку, чтобы участвовать в рулетке!', reply_markup=reply_markup)
 
-# Обработчик нажатий кнопок
+# Обработчик нажатий на кнопки
 async def button(update: Update, context: CallbackContext) -> None:
-    global players
     query = update.callback_query
     user = query.from_user
-    
-    # Проверяем, не добавлен ли игрок ранее
-    if user.id not in [player.id for player in players]:
-        players.append(user)
-        await query.answer(f'{user.first_name} присоединился к игре!')
-    
-    # Если набралось два игрока, запускаем игру
-    if len(players) == 2:
-        await query.message.edit_text(f'Игроки: {players[0].first_name} и {players[1].first_name}. Начинаем раздачу карт!')
+
+    if 'players' not in context.chat_data:
+        context.chat_data['players'] = []
+
+    if len(context.chat_data['players']) < 2:
+        if user.id not in context.chat_data['players']:
+            context.chat_data['players'].append(user.id)
+            await query.answer()
+            await query.edit_message_text(text=f"Вы добавлены в очередь. ({len(context.chat_data['players'])}/2)")
+        else:
+            await query.answer("Вы уже участвуете в рулетке.")
+    else:
+        await query.answer("Рулетка уже запущена. Подождите окончания текущего раунда.")
+
+    if len(context.chat_data['players']) == 2:
+        player1 = context.chat_data['players'][0]
+        player2 = context.chat_data['players'][1]
+
+        # Розыгрыш карт
+        hand1 = generate_hand()
+        hand2 = generate_hand()
+        community_cards = [generate_hand() for _ in range(5)]
+
+        # Подготовка сообщений
+        messages = []
+        messages.append(f"Карманные карты:\nИгрок 1: {hand1}\nИгрок 2: {hand2}\n")
+        messages.append(f"Флоп: {community_cards[0]}\n")
+        messages.append(f"Терн: {community_cards[1]}\n")
+        messages.append(f"Ривер: {community_cards[2]}\n")
         
-        # Вызываем функцию для раздачи карт
-        await start_poker_game(query.message, context)
+        # Объявление победителя (Пример, не реализован настоящий алгоритм оценки рук)
+        winner = random.choice([player1, player2])
+        messages.append(f"Победитель: {winner} с комбинацией {evaluate_hand(hand1 + community_cards) if winner == player1 else evaluate_hand(hand2 + community_cards)}")
 
-# Функция для раздачи карт
-async def start_poker_game(message, context: CallbackContext) -> None:
-    global players
-    
-    deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A'] * 4
-    random.shuffle(deck)
-    
-    # Раздача карманных карт игрокам
-    player_1_hand = [deck.pop(), deck.pop()]
-    player_2_hand = [deck.pop(), deck.pop()]
-    
-    # Первое сообщение: карманные карты
-    await message.reply_text(f'{players[0].first_name}: {player_1_hand[0]}, {player_1_hand[1]}\n'
-                             f'{players[1].first_name}: {player_2_hand[0]}, {player_2_hand[1]}')
-    
-    # Флоп
-    flop = [deck.pop(), deck.pop(), deck.pop()]
-    await message.reply_text(f'Флоп: {flop[0]}, {flop[1]}, {flop[2]}')
-    
-    # Терн
-    turn = deck.pop()
-    await message.reply_text(f'Терн: {turn}')
-    
-    # Ривер
-    river = deck.pop()
-    await message.reply_text(f'Ривер: {river}')
-    
-    # Определение победителя (упрощенно, просто случайный выбор)
-    winner = random.choice(players)
-    await message.reply_text(f'Победитель: {winner.first_name}!')
-    
-    # Очищаем список игроков для следующей игры
-    players = []
+        for msg in messages:
+            await update.message.reply_text(msg)
 
+        # Очистка данных после завершения раунда
+        context.chat_data['players'] = []
 
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -173,7 +174,8 @@ def main() -> None:
     application.add_handler(CommandHandler("dolgi", get_debts))
     application.add_handler(CommandHandler("komu_kidat", komu_kidat))
     application.add_handler(CommandHandler("ruletka", ruletka))
-    application.add_handler(CallbackQueryHandler(button, pattern='join_game'))
+    application.add_handler(CallbackQueryHandler(button))
+    
 
     # Запуск бота
     application.run_polling()
