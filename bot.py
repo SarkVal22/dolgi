@@ -7,7 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
 import random
-import time
+import asyncio
 
 # Применение nest_asyncio для решения проблемы с циклом событий
 nest_asyncio.apply()
@@ -136,8 +136,14 @@ async def button(update: Update, context: CallbackContext) -> None:
     logging.info(f"Current participants: {roulette_participants}")
 
     if len(roulette_participants) == 2:
-        logging.info("Starting roulette")
-        context.job_queue.run_once(start_roulette, 1, context=update.message.chat_id)
+        # Удаляем кнопку и сообщение о том, что участники записаны
+        await query.message.edit_text(
+            text=f"Участвуют:\n1. {roulette_participants[0]['name']} {user_ids.get(roulette_participants[0]['name'], '')}\n2. {roulette_participants[1]['name']} {user_ids.get(roulette_participants[1]['name'], '')}\n\nНачинаем раздачу...",
+            reply_markup=None
+        )
+        
+        # Запускаем раздачу карт
+        context.job_queue.run_once(start_roulette, 1, context=query.message.chat_id)
 
 async def start_roulette(context: CallbackContext) -> None:
     chat_id = context.job.context
@@ -161,23 +167,21 @@ async def start_roulette(context: CallbackContext) -> None:
     player1_hand = deal_hand()
     player2_hand = deal_hand()
     
-    message = f"Участвуют:\n1. {roulette_participants[0]['name']} {user_ids.get(roulette_participants[0]['name'], '')}\n2. {roulette_participants[1]['name']} {user_ids.get(roulette_participants[1]['name'], '')}\n\n"
-
-    message += "Карманные карты:\n"
+    message = f"Карманные карты:\n"
     message += f"1. {roulette_participants[0]['name']}: {', '.join(player1_hand)}\n"
     message += f"2. {roulette_participants[1]['name']}: {', '.join(player2_hand)}\n"
 
     await context.bot.send_message(chat_id, message)
 
-    time.sleep(5)
+    await asyncio.sleep(5)
     flop = [deck.pop() for _ in range(3)]
     await context.bot.send_message(chat_id, f"Флоп: {', '.join(flop)}")
 
-    time.sleep(5)
+    await asyncio.sleep(5)
     turn = deck.pop()
     await context.bot.send_message(chat_id, f"Терн: {turn}")
 
-    time.sleep(5)
+    await asyncio.sleep(5)
     river = deck.pop()
     await context.bot.send_message(chat_id, f"Ривер: {river}")
 
