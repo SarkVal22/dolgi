@@ -52,7 +52,8 @@ user_ids = {
     'Влад Б': '@blvvld',
     'Мария К': '@thaidancer',
     'Стас': '@s4fbrc4',
-    'Дима': '@kirichevsky',
+    'Дима': '@arbyzovd',
+    'Данил': '@kirichevsky',
     # Добавьте другие имена и их user_id
 }
 
