@@ -27,17 +27,22 @@ sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
 # Словарь с именами и user_id (не будет использоваться в этой команде)
 user_ids = {
+    'Михаил Г': '@Mikhail_Ga_n',
     'Арсен К': '@AKukhmazov',
     'Андрей Ж': '@zhandnab',
+    'Тимур Ц': '@TskTimur',
     'Андрей А': '@Alenin_Andrey',
     'Валера Б': '@valerkas',
     'Валера С': '@ValeriySark',
+    'Аркадий Б': '@Ark_7_7',
     'Артем Б': '@Zeus7717',
     'Марат Д': '@Marat1k77',
     'Данзан': '@gunndanz',
     'Андрей С': '@Premove',
     'Евгений А': '@abram88',
     'Евгений М': '@Hate_m11',
+    'Федор': '@FB_S7',
+    'Семен': '@semcrane',
     'Михаил Б': '@pryanni',
     'Костя': '@hlopkost',
     'Артем Г': '@Artem_Galaktionov22',
@@ -47,7 +52,6 @@ user_ids = {
     'Влад Б': '@blvvld',
     'Мария': '@thaidancer',
     'Стас': '@s4fbrc4',
-    'Имя1': '@user_id1',
     'Имя2': '@user_id2',
     # Добавьте другие имена и их user_id
 }
