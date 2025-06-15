@@ -7,6 +7,11 @@ from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
 
+raw_cred = os.getenv('GOOGLE_CREDENTIALS')
+print("DEBUG CREDENTIALS:", raw_cred[:200])  # Выведет первые 200 символов
+
+GOOGLE_CREDENTIALS = json.loads(raw_cred)
+
 # Применение nest_asyncio для решения проблемы с циклом событий
 nest_asyncio.apply()
 
