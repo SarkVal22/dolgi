@@ -50,9 +50,9 @@ user_ids = {
     'Кирилл Ш': '@Batko2003',
     'Егор У': '@yagr55',
     'Влад Б': '@blvvld',
-    'Мария': '@thaidancer',
+    'Мария К': '@thaidancer',
     'Стас': '@s4fbrc4',
-    'Имя2': '@user_id2',
+    'Дима': '@kirichevsky',
     # Добавьте другие имена и их user_id
 }
 
