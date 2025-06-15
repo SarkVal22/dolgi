@@ -18,7 +18,8 @@ nest_asyncio.apply()
 # Используйте переменные окружения для токенов и идентификаторов
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
-GOOGLE_CREDENTIALS = json.loads(os.getenv('GOOGLE_CREDENTIALS'))
+raw_json = os.getenv("GOOGLE_CREDENTIALS").replace('\\n', '\n')
+GOOGLE_CREDENTIALS = json.loads(raw_json)
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
