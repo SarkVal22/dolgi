@@ -7,16 +7,13 @@ from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
 
-raw_cred = os.getenv('GOOGLE_CREDENTIALS')
-print("DEBUG CREDENTIALS:", raw_cred[:200])  # Выведет первые 200 символов
-
 # Применение nest_asyncio для решения проблемы с циклом событий
 nest_asyncio.apply()
 
 # Используйте переменные окружения для токенов и идентификаторов
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
-raw_json = os.getenv("GOOGLE_CREDENTIALS").replace('\\n', '\n')
+raw_json = os.getenv("GOOGLE_CREDENTIALS")
 GOOGLE_CREDENTIALS = json.loads(raw_json)
 
 # Настройка логирования
