@@ -56,8 +56,8 @@ async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Привет! Отправь /dolgi, чтобы получить список задолжников.')
 
 async def get_debts(update: Update, context: CallbackContext) -> None:
-    debts = sheet.row_values(560)  # Имена (строка 560)
-    amounts = sheet.row_values(562)  # Долги (строка 562)
+    debts = sheet.row_values(755)  # Имена (строка 560)
+    amounts = sheet.row_values(758)  # Долги (строка 562)
 
     message = "ДОЛГИ 🤡\n\n"
     for name, amount in zip(debts, amounts):
