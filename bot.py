@@ -62,8 +62,8 @@ async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Привет! Отправь /dolgi, чтобы получить список задолжников.')
 
 async def get_debts(update: Update, context: CallbackContext) -> None:
-    debts = sheet.row_values(755)  # Имена (строка 560)
-    amounts = sheet.row_values(758)  # Долги (строка 562)
+    debts = sheet.row_values(3001)  # Имена (строка 560)
+    amounts = sheet.row_values(3004)  # Долги (строка 562)
 
     message = "ДОЛГИ 🤡\n\n"
     for name, amount in zip(debts, amounts):
@@ -86,10 +86,10 @@ async def get_debts(update: Update, context: CallbackContext) -> None:
 
 # Новая команда "komu_kidat"
 async def komu_kidat(update: Update, context: CallbackContext) -> None:
-    debts = sheet.row_values(755)  # Имена (строка 560)
-    amounts = sheet.row_values(758)  # Долги (строка 562)
-    phones = sheet.row_values(760)  # Номера телефонов (строка 563)
-    banks = sheet.row_values(761)  # Банки (строка 564)
+    debts = sheet.row_values(3001)  # Имена (строка 560)
+    amounts = sheet.row_values(3004)  # Долги (строка 562)
+    phones = sheet.row_values(3006)  # Номера телефонов (строка 563)
+    banks = sheet.row_values(3007)  # Банки (строка 564)
 
     message = "КОМУ ПЕРЕВОДИТЬ 💸\n\n"
     for name, amount, phone, bank in zip(debts, amounts, phones, banks):
